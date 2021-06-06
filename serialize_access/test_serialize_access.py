@@ -1,5 +1,6 @@
 import pytest
 from serialize_access import serialize_access
+import copy
 import json
 
 delimiter = serialize_access.DELIMITER
@@ -124,63 +125,63 @@ normal_dict = {
 }
 
 class TestGetKeys(object):
-    def testGetKeysD01(self, printKeys, debug):
+    def testGetKeysD01(self): # , printKeys, debug):
         d01Ks = ["k0", "k1", "k2"]
         d01K = serialize_access.getKeys(d01)
-        print(f"keys: {d01K}") if printKeys else ""
+        # print(f"keys: {d01K}") # if printKeys else ""
         assert len(d01K) == len(d01Ks)
         assert d01K == d01Ks
 
-    def testGetKeysD02(self, printKeys, debug):
+    def testGetKeysD02(self): # , printKeys, debug):
         d02Ks = ['k0:0', 'k0:1', 'k0:2', 'k1:0', 'k1:1', 'k1:2', 'k2:k0', 'k2:k1', 'k2:k2']
         d02K = serialize_access.getKeys(d022)
-        print(f"keys: {d02K}") if printKeys else ""
+        # print(f"keys: {d02K}") # if printKeys else ""
         assert len(d02K) == len(d02Ks)
         assert d02K == d02Ks
 
-    def testGetKeysD02List(self, printKeys, debug):
+    def testGetKeysD02List(self): # , printKeys, debug):
         d02Ks = [['k0', '0' ], ['k0', '1' ], ['k0', '2' ],
                  ['k1', '0' ], ['k1', '1' ], ['k1', '2' ],
                  ['k2', 'k0'], ['k2', 'k1'], ['k2', 'k2']]
         d02K = serialize_access.getKeys(d022, serialize=False)
-        print(f"keys: {d02K}") if printKeys else ""
+        # print(f"keys: {d02K}") # if printKeys else ""
         assert len(d02K) == len(d02Ks)
         assert d02K == d02Ks
 
-    def testGetKeysL01(self, printKeys, debug):
+    def testGetKeysL01(self): # , printKeys, debug):
         l01Ks = ["0", "1", "2"]
         l01K = serialize_access.getKeys(l01)
-        print(f"keys: {l01K}") if printKeys else ""
+        # print(f"keys: {l01K}") # if printKeys else ""
         assert len(l01K) == len(l01Ks)
         assert l01K == l01Ks
 
-    def testGetKeysL04(self, printKeys, debug):
+    def testGetKeysL04(self): # , printKeys, debug):
         l04Ks = ["0:0", "0:1", "0:2", "1:0", "1:1", "1:2", "2:0", "2:1", "2:2"]
         l04K = serialize_access.getKeys(l04)
-        print(f"keys: {l04K}") if printKeys else ""
+        # print(f"keys: {l04K}") # if printKeys else ""
         assert len(l04K) == len(l04Ks)
         assert l04K == l04Ks
 
-    def testGetKeysL05(self, printKeys, debug):
+    def testGetKeysL05(self): # , printKeys, debug):
         l05Ks = ['0:0:0', '0:0:1', '0:0:2', '0:1:0', '0:1:1', '0:1:2', '0:2:0', '0:2:1', '0:2:2',
                  '1:0:0', '1:0:1', '1:0:2', '1:1:0', '1:1:1', '1:1:2', '1:2:0', '1:2:1', '1:2:2',
                  '2:0:0', '2:0:1', '2:0:2', '2:1:0', '2:1:1', '2:1:2', '2:2:0', '2:2:1', '2:2:2',]
         l05K = serialize_access.getKeys(l05)
-        print(f"keys: {l05K}") if printKeys else ""
+        # print(f"keys: {l05K}") # if printKeys else ""
         assert len(l05K) == len(l05Ks)
         assert l05K == l05Ks
 
-    def testGetKeysj01(self, printKeys, debug):
+    def testGetKeysj01(self): # , printKeys, debug):
         j01 = json.loads(j01s)
         j01K = serialize_access.getKeys(j01)
-        print(f"keys: {j01K}") if printKeys else ""
+        # print(f"keys: {j01K}") # if printKeys else ""
         assert len(j01K) == len(j01Ks)
         assert j01K == j01Ks
 
-    def testGetKeysj02(self, printKeys, debug):
+    def testGetKeysj02(self): # , printKeys, debug):
         j02 = json.loads(j02s)
         j02K = serialize_access.getKeys(j02)
-        print(f"keys: {j02K}") if printKeys else ""
+        # print(f"keys: {j02K}") # if printKeys else ""
         assert len(j02K) == len(j02Ks)
         assert j02K == j02Ks
 
@@ -267,70 +268,80 @@ class TestAddValue(object):
     def testD01KeyValueExists(self):
         key = "k1l"
         newValue = "yyy"
-        serialize_access.setValue(d01, key, newValue)
-        fieldValue = serialize_access.getValue(d01, key)
+        testValue = d01.copy()
+        serialize_access.setValue(testValue, key, newValue)
+        fieldValue = serialize_access.getValue(testValue, key)
         assert fieldValue == newValue
 
     def testD012KeyValueMissing(self):
         key = "k1n:a"
         newValue = "yyy"
-        serialize_access.setValue(d01, key, newValue)
-        fieldValue = serialize_access.getValue(d01, key)
+        testValue = d01.copy()
+        serialize_access.setValue(testValue, key, newValue)
+        fieldValue = serialize_access.getValue(testValue, key)
         assert fieldValue == newValue
 
     def testNormalKeyValueMissing(self):
         key = "c:cc"
         newValue = "yyy"
-        serialize_access.setValue(normal_dict, key, newValue)
-        assert normal_dict["c"]["cc"] == newValue
+        testValue = normal_dict.copy()
+        serialize_access.setValue(testValue, key, newValue)
+        assert testValue["c"]["cc"] == newValue
 
     def testD01KeyValueMissing(self):
         key = "k1n"
         newValue = "yyy"
-        serialize_access.setValue(d01, key, newValue)
-        fieldValue = serialize_access.getValue(d01, key)
-        assert newValue == d01[key]
+        testValue = d01.copy()
+        serialize_access.setValue(testValue, key, newValue)
+        fieldValue = serialize_access.getValue(testValue, key)
+        assert newValue == testValue[key]
 
     def testD02KeyValueExists(self):
         key = "d1"
         newValue = "yyy"
-        serialize_access.setValue(d02, key, newValue)
-        assert newValue == d02[key]
+        testValue = d02.copy()
+        serialize_access.setValue(testValue, key, newValue)
+        assert newValue == testValue[key]
 
     def testD02KeyValueMissing(self):
         key = "d1l"
         newValue = "yyy"
-        serialize_access.setValue(d02, key, newValue)
-        fieldValue = serialize_access.getValue(d02, key)
-        assert newValue == d02[key]
+        testValue = d02.copy()
+        serialize_access.setValue(testValue, key, newValue)
+        fieldValue = serialize_access.getValue(testValue, key)
+        assert newValue == testValue[key]
 
     def testD02IndexIntValueMissing(self):
         key = ["k1", 1]
         newValue = "yyy"
-        serialize_access.setValue(d022, key, newValue)
-        assert newValue == d022[key[0]][key[1]]
+        testValue =copy.deepcopy( d022)
+        serialize_access.setValue(testValue, key, newValue)
+        assert newValue == testValue[key[0]][key[1]]
 
     def testD02IndexStrValueMissing(self):
         # serialize-access.DELIMITER = '\0'
         keys = ["k1", "5"]
         key = serialize_access.DELIMITER.join(keys)
         newValue = "yyy"
-        serialize_access.setValue(d022, key, newValue)
-        assert newValue == d022[keys[0]][int(keys[1])]
+        testValue =copy.deepcopy( d022)
+        serialize_access.setValue(testValue, key, newValue)
+        assert newValue == testValue[keys[0]][int(keys[1])]
 
     def testL05IndexValueExist(self):
         keys = ["1", "1"]
         key = serialize_access.DELIMITER.join(keys)
         newValue = "yyy"
-        serialize_access.setValue(l05, key, newValue)
-        assert newValue == l05[int(keys[0])][int(keys[1])]
+        testValue = copy.deepcopy( l05)
+        serialize_access.setValue(testValue, key, newValue)
+        assert newValue == testValue[int(keys[0])][int(keys[1])]
 
     def testL05IndexValueMissing(self):
         keys = ["1", "3"]
         key = serialize_access.DELIMITER.join(keys)
         newValue = "yyy"
-        serialize_access.setValue(l05, key, newValue)
-        assert newValue == l05[int(keys[0])][int(keys[1])]
+        testValue = copy.deepcopy( l05)
+        serialize_access.setValue(testValue, key, newValue)
+        assert newValue == testValue[int(keys[0])][int(keys[1])]
 
     def testL05ChangeNode(self):
         keys = ["b"]
