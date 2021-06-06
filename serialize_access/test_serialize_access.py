@@ -266,7 +266,7 @@ class TestAddValue(object):
     """
 
     def testD01KeyValueExists(self):
-        key = "k1l"
+        key = "k1"
         newValue = "yyy"
         testValue = d01.copy()
         serialize_access.setValue(testValue, key, newValue)

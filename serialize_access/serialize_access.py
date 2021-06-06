@@ -5,11 +5,82 @@ Dict with access to nested dict and list thru a single flat key
 Support to access values with one complex key
 """
 import collections
+from functools import singledispatchmethod
 import logging
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.DEBUG)
 # logging.basicConfig(levelogging.INFO)
+class myDictHelp(object):
+    @singledispatchmethod
+    def init_my_dict(self, my_dict, part_key, tabs):
+        if my_dict == ():
+            if part_key.isnumeric():
+                my_dict = [None] * int(part_key)
+            else:
+                my_dict = {part_key: None}
+        else:
+            logger.error(f"{tabs}error: part_key: {part_key}, {my_dict}")
+            pass
+        logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+        return my_dict, part_key
+
+    @init_my_dict.register
+    def _(self, my_dict: dict, part_key, tabs):
+        if part_key not in my_dict:
+            my_dict[part_key] = ()
+        logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+        return my_dict, part_key
+
+    @init_my_dict.register
+    def _(self, my_dict: list, part_key, tabs):
+        part_key = int(part_key)
+        if part_key < len(my_dict):
+            my_dict += [()] * (part_key + 1 - len(my_dict))
+        logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+        return my_dict, part_key
+
+    @singledispatchmethod
+    def addElement(self, my_dict, last_part_key, prior_my_dict, prior_part_key):
+        if last_part_key.isnumeric():
+            last_part_key = int(last_part_key)
+            if last_part_key >= len(my_dict):
+                prior_my_dict[prior_part_key] += [()] * (
+                    last_part_key + 1 - len(my_dict)
+                )
+        else:
+            prior_my_dict[prior_part_key] = dict()
+        my_dict = prior_my_dict[prior_part_key]
+        return last_part_key, my_dict
+
+    @addElement.register
+    def _(self, my_dict: list, last_part_key, prior_my_dict, prior_part_key):
+        last_part_key = int(last_part_key)
+        if last_part_key >= len(my_dict):
+            my_dict += [()] * (last_part_key + 1 - len(my_dict))
+        return last_part_key, my_dict
+
+    @addElement.register
+    def _(self, my_dict: dict, last_part_key, prior_my_dict, prior_part_key):
+        return last_part_key, my_dict
+
+    def addElementx(self, my_dict, last_part_key, prior_my_dict, prior_part_key):
+        if isinstance(my_dict, list):
+            last_part_key = int(last_part_key)
+            if last_part_key >= len(my_dict):
+                my_dict += [()] * (last_part_key + 1 - len(my_dict))
+        elif not isinstance(my_dict, dict):
+            if last_part_key.isnumeric():
+                last_part_key = int(last_part_key)
+                if last_part_key >= len(my_dict):
+                    prior_my_dict[prior_part_key] += [()] * (
+                        last_part_key + 1 - len(my_dict)
+                    )
+            else:
+                prior_my_dict[prior_part_key] = dict()
+            my_dict = prior_my_dict[prior_part_key]
+        return last_part_key, my_dict
+my_dict_help = myDictHelp()
 
 """
 
@@ -90,50 +161,50 @@ def setValue(json_dict_list, key, value):
     else:
         keys = key.split(DELIMITER)
     last_part_key = keys.pop()
+    prior_part_key = None
+    prior_my_dict = {}
     my_dict = json_dict_list
     logger.debug(f"keys: {list(keys)}, value: {value}")
     tabs = ""
+    # my_dict_help = myDictHelp()
     for part_key in keys:
         tabs += "\t"
         logger.debug(f"\tpart_key: {part_key}")
-        if isinstance(my_dict, dict):
-            if part_key not in my_dict:
-                my_dict[part_key] = ()
-            logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
-        elif isinstance(my_dict, list):
-            part_key = int(part_key)
-            if part_key < len(my_dict):
-                my_dict += [()] * (part_key + 1 - len(my_dict))
-            logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
-        else:
-            if my_dict == ():
-                if part_key.isnumeric():
-                    my_dict = [None] * int(part_key)
-                else:
-                    my_dict = {part_key: None}
-            else:
-                logger.error(f"{tabs}error: part_key: {part_key}, {my_dict}")
-                pass
-            logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+        my_dict, part_key = my_dict_help.init_my_dict(my_dict, part_key, tabs)
         prior_part_key = part_key
         prior_my_dict = my_dict
         my_dict = my_dict[part_key]
-    if isinstance(my_dict, list):
-        last_part_key = int(last_part_key)
-        if last_part_key >= len(my_dict):
-            my_dict += [()] * (last_part_key + 1 - len(my_dict))
-    elif not isinstance(my_dict, dict):
-        if last_part_key.isnumeric():
-            last_part_key = int(last_part_key)
-            if last_part_key >= len(my_dict):
-                prior_my_dict[prior_part_key] += [()] * (
-                    last_part_key + 1 - len(my_dict)
-                )
-        else:
-            prior_my_dict[prior_part_key] = dict()
-        my_dict = prior_my_dict[prior_part_key]
+    last_part_key, my_dict = my_dict_help.addElement(my_dict, last_part_key, prior_my_dict, prior_part_key)
     my_dict[last_part_key] = value
     return
+
+
+
+# class myDictHelp(object):
+#     # @format.register
+#     # def _(self, arg: date):
+#     def init_my_dict(self, my_dict, part_key, tabs):
+#         if isinstance(my_dict, dict):
+#             if part_key not in my_dict:
+#                 my_dict[part_key] = ()
+#             logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+#         elif isinstance(my_dict, list):
+#             part_key = int(part_key)
+#             if part_key < len(my_dict):
+#                 my_dict += [()] * (part_key + 1 - len(my_dict))
+#             logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+#         else:
+#             if my_dict == ():
+#                 if part_key.isnumeric():
+#                     my_dict = [None] * int(part_key)
+#                 else:
+#                     my_dict = {part_key: None}
+#             else:
+#                 logger.error(f"{tabs}error: part_key: {part_key}, {my_dict}")
+#                 pass
+#             logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
+#         return my_dict, part_key
+
 
 
 def getKeys(json_dict_list, serialize=True):
@@ -202,3 +273,25 @@ def getKeys(json_dict_list, serialize=True):
             f'{tabs}*** last fullKey: {fullKeys[-1] if len(fullKeys) > 0 else  "start"}'
         )
     return fullKeys
+
+# new functionality to improve coding
+from datetime import date, time
+
+class Formatter:
+    @singledispatchmethod
+    def format(self, arg):
+        raise NotImplementedError(f"Cannot format value of type {type(arg)}")
+
+    @format.register
+    def _(self, arg: date):
+        return f"{arg.day}-{arg.month}-{arg.year}"
+
+    @format.register
+    def _(self, arg: time):
+        return f"{arg.hour}:{arg.minute}:{arg.second}"
+
+# f = Formatter()
+# print(f.format(date(2021, 5, 26)))
+# # 26-5-2021
+# print(f.format(time(19, 22, 15)))
+# # 19:22:15
