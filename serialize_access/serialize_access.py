@@ -7,13 +7,16 @@ Support to access values with one complex key
 import collections
 from functools import singledispatchmethod
 import logging
+from collections.abc import Sequence
+from typing import Union, Any, List, Optional, cast
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.DEBUG)
 # logging.basicConfig(levelogging.INFO)
 class myDictHelp(object):
     @singledispatchmethod
-    def init_my_dict(self, my_dict, part_key, tabs):
+    @staticmethod
+    def init_my_dict(my_dict, part_key, tabs):
         if my_dict == ():
             if part_key.isnumeric():
                 my_dict = [None] * int(part_key)
@@ -26,14 +29,14 @@ class myDictHelp(object):
         return my_dict, part_key
 
     @init_my_dict.register
-    def _(self, my_dict: dict, part_key, tabs):
+    def _(my_dict: dict, part_key, tabs):
         if part_key not in my_dict:
             my_dict[part_key] = ()
         logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
         return my_dict, part_key
 
     @init_my_dict.register
-    def _(self, my_dict: list, part_key, tabs):
+    def _(my_dict: list, part_key, tabs):
         part_key = int(part_key)
         if part_key < len(my_dict):
             my_dict += [()] * (part_key + 1 - len(my_dict))
@@ -41,7 +44,8 @@ class myDictHelp(object):
         return my_dict, part_key
 
     @singledispatchmethod
-    def addElement(self, my_dict, last_part_key, prior_my_dict, prior_part_key):
+    @staticmethod
+    def addElement(my_dict, last_part_key, prior_my_dict, prior_part_key):
         if last_part_key.isnumeric():
             last_part_key = int(last_part_key)
             if last_part_key >= len(my_dict):
@@ -54,33 +58,61 @@ class myDictHelp(object):
         return last_part_key, my_dict
 
     @addElement.register
-    def _(self, my_dict: list, last_part_key, prior_my_dict, prior_part_key):
+    def _(my_dict: list, last_part_key, prior_my_dict, prior_part_key):
         last_part_key = int(last_part_key)
         if last_part_key >= len(my_dict):
             my_dict += [()] * (last_part_key + 1 - len(my_dict))
         return last_part_key, my_dict
 
     @addElement.register
-    def _(self, my_dict: dict, last_part_key, prior_my_dict, prior_part_key):
+    def _(my_dict: dict, last_part_key, prior_my_dict, prior_part_key):
         return last_part_key, my_dict
 
-    def addElementx(self, my_dict, last_part_key, prior_my_dict, prior_part_key):
-        if isinstance(my_dict, list):
-            last_part_key = int(last_part_key)
-            if last_part_key >= len(my_dict):
-                my_dict += [()] * (last_part_key + 1 - len(my_dict))
-        elif not isinstance(my_dict, dict):
-            if last_part_key.isnumeric():
-                last_part_key = int(last_part_key)
-                if last_part_key >= len(my_dict):
-                    prior_my_dict[prior_part_key] += [()] * (
-                        last_part_key + 1 - len(my_dict)
-                    )
-            else:
-                prior_my_dict[prior_part_key] = dict()
-            my_dict = prior_my_dict[prior_part_key]
-        return last_part_key, my_dict
-my_dict_help = myDictHelp()
+    @singledispatchmethod
+    @staticmethod
+    def getParamKeys(key):
+        return key
+
+    @getParamKeys.register
+    def _(key: int):
+        return [key]
+
+    @getParamKeys.register
+    def _(key: str):
+        return key.split(DELIMITER)
+
+    @getParamKeys.register
+    def _(key: list):
+        return key.copy()
+
+    @singledispatchmethod
+    @staticmethod
+    def keysIter(response):
+        logger.debug(f"scalar keys: {response}")
+        return None
+
+    @keysIter.register
+    def _(response: dict):
+        logger.debug(f"dict keys: {response.keys()}")
+        return iter(response.keys())
+
+    @keysIter.register
+    def _(response: list):
+        logger.debug(f"list keys: {list(range(len(response)))}")
+        return iter(range(len(response)))
+
+    @singledispatchmethod
+    @staticmethod
+    def nextKey(response, keys):
+        return None
+
+    @nextKey.register
+    def _(response: list, keys):
+        return next(keys, None)
+
+    @nextKey.register
+    def _(response: dict, keys):
+        return next(keys, None)
 
 """
 
@@ -97,12 +129,7 @@ def getValue(json_dict_list, key):
     :param key: string of keys with ":" DELIMITER
     :return: value of final key
     """
-    if isinstance(key, int):
-        keys = [key]
-    elif isinstance(key, str):
-        keys = key.split(DELIMITER)
-    else:
-        keys = key
+    keys = myDictHelp.getParamKeys(key)
     my_dict = json_dict_list
     logger.debug(f"keys: {list(keys)}")
     index = 0
@@ -154,57 +181,25 @@ def setValue(json_dict_list, key, value):
     :param value: value for last key
     :return: None
     """
-    if isinstance(key, int):
-        keys = [key]
-    elif isinstance(key, list):
-        keys = key.copy()
-    else:
-        keys = key.split(DELIMITER)
+    keys = myDictHelp.getParamKeys(key)
+
     last_part_key = keys.pop()
     prior_part_key = None
     prior_my_dict = {}
     my_dict = json_dict_list
     logger.debug(f"keys: {list(keys)}, value: {value}")
     tabs = ""
-    # my_dict_help = myDictHelp()
+    # myDictHelp = myDictHelp()
     for part_key in keys:
         tabs += "\t"
         logger.debug(f"\tpart_key: {part_key}")
-        my_dict, part_key = my_dict_help.init_my_dict(my_dict, part_key, tabs)
+        my_dict, part_key = myDictHelp.init_my_dict(my_dict, part_key, tabs)
         prior_part_key = part_key
         prior_my_dict = my_dict
         my_dict = my_dict[part_key]
-    last_part_key, my_dict = my_dict_help.addElement(my_dict, last_part_key, prior_my_dict, prior_part_key)
+    last_part_key, my_dict = myDictHelp.addElement(my_dict, last_part_key, prior_my_dict, prior_part_key)
     my_dict[last_part_key] = value
     return
-
-
-
-# class myDictHelp(object):
-#     # @format.register
-#     # def _(self, arg: date):
-#     def init_my_dict(self, my_dict, part_key, tabs):
-#         if isinstance(my_dict, dict):
-#             if part_key not in my_dict:
-#                 my_dict[part_key] = ()
-#             logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
-#         elif isinstance(my_dict, list):
-#             part_key = int(part_key)
-#             if part_key < len(my_dict):
-#                 my_dict += [()] * (part_key + 1 - len(my_dict))
-#             logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
-#         else:
-#             if my_dict == ():
-#                 if part_key.isnumeric():
-#                     my_dict = [None] * int(part_key)
-#                 else:
-#                     my_dict = {part_key: None}
-#             else:
-#                 logger.error(f"{tabs}error: part_key: {part_key}, {my_dict}")
-#                 pass
-#             logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
-#         return my_dict, part_key
-
 
 
 def getKeys(json_dict_list, serialize=True):
@@ -217,33 +212,19 @@ def getKeys(json_dict_list, serialize=True):
     :return: list of all key string to access elements
     """
     response = json_dict_list
-    notDone = True
-    if isinstance(response, dict):
-        keys = iter(response.keys())
-        logger.debug(f"dict keys: {response.keys()}")
-    elif isinstance(response, list):
-        keys = iter(range(len(response)))
-        logger.debug(f"list keys: {list(range(len(response)))}")
-    else:
-        logger.debug(f"scalar keys: {response}")
-        notDone = False
+    keys = myDictHelp.keysIter(response)
     jsonStack = collections.deque()
     fullKeys = []
     fullKey = []
-    while notDone:
+    while not (keys is None):
         tabs = "\t" * len(jsonStack)
-        if isinstance(response, dict):
-            key = next(keys, None)
-        elif isinstance(response, list):
-            key = next(keys, None)
-        else:
-            key = None
+        key = myDictHelp.nextKey(response, keys)
         logger.debug(f"\t{tabs}key: {key}")
         if key is None:
             if len(jsonStack) > 0:
                 (response, fullKey, keys) = jsonStack.pop()
             else:
-                notDone = False
+                keys = None
         else:
             logger.debug(f"\t{tabs}\tresponse[key]: {response[key]}")
             if isinstance(response[key], (list, dict)):
@@ -273,6 +254,7 @@ def getKeys(json_dict_list, serialize=True):
             f'{tabs}*** last fullKey: {fullKeys[-1] if len(fullKeys) > 0 else  "start"}'
         )
     return fullKeys
+
 
 # new functionality to improve coding
 from datetime import date, time
