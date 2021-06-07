@@ -7,13 +7,18 @@ Support to access values with one complex key
 import collections
 from functools import singledispatchmethod
 import logging
-from collections.abc import Sequence
-from typing import Union, Any, List, Optional, cast
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.DEBUG)
 # logging.basicConfig(levelogging.INFO)
+
+
 class myDictHelp(object):
+    """
+    List and Dict must be managed differently.
+    Class for singledispatchmethod to manage list and dict.
+    Register methods to handle list and dict separately.
+    """
     @singledispatchmethod
     @staticmethod
     def init_my_dict(my_dict, part_key, tabs):
@@ -24,6 +29,7 @@ class myDictHelp(object):
                 my_dict = {part_key: None}
         else:
             logger.error(f"{tabs}error: part_key: {part_key}, {my_dict}")
+            raise RuntimeError('Failure to provide dict/list')
             pass
         logger.debug(f"{tabs}part_key: {part_key}, my_dict[part_key]")
         return my_dict, part_key
@@ -114,10 +120,7 @@ class myDictHelp(object):
     def _(response: dict, keys):
         return next(keys, None)
 
-"""
 
-
-"""
 DELIMITER = ":"
 
 
@@ -193,7 +196,10 @@ def setValue(json_dict_list, key, value):
     for part_key in keys:
         tabs += "\t"
         logger.debug(f"\tpart_key: {part_key}")
-        my_dict, part_key = myDictHelp.init_my_dict(my_dict, part_key, tabs)
+        try:
+            my_dict, part_key = myDictHelp.init_my_dict(my_dict, part_key, tabs)
+        except Exception as e:
+            raise (e)
         prior_part_key = part_key
         prior_my_dict = my_dict
         my_dict = my_dict[part_key]
@@ -254,26 +260,3 @@ def getKeys(json_dict_list, serialize=True):
             f'{tabs}*** last fullKey: {fullKeys[-1] if len(fullKeys) > 0 else  "start"}'
         )
     return fullKeys
-
-
-# new functionality to improve coding
-from datetime import date, time
-
-class Formatter:
-    @singledispatchmethod
-    def format(self, arg):
-        raise NotImplementedError(f"Cannot format value of type {type(arg)}")
-
-    @format.register
-    def _(self, arg: date):
-        return f"{arg.day}-{arg.month}-{arg.year}"
-
-    @format.register
-    def _(self, arg: time):
-        return f"{arg.hour}:{arg.minute}:{arg.second}"
-
-# f = Formatter()
-# print(f.format(date(2021, 5, 26)))
-# # 26-5-2021
-# print(f.format(time(19, 22, 15)))
-# # 19:22:15

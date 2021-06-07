@@ -358,3 +358,48 @@ class TestAddValue(object):
         j02 = json.loads(j02s)
         serialize_access.setValue(j02, key, newValue)
         assert newValue == j02[keys[0]]
+
+    def testBadStruct(self):
+        keys = ["b", "c"]
+        key = serialize_access.DELIMITER.join(keys)
+        newValue = {"zz": "yyy"}
+        j02 = "json.loads(j02s)"
+        with pytest.raises(RuntimeError, match=rf"Failure to provide dict/list"):  # .format()):
+            assert serialize_access.setValue(j02, key, newValue)
+
+    def testBadStructInt(self):
+        keys = [0, "c"]
+        # key = serialize_access.DELIMITER.join(keys)
+        newValue = {"zz": "yyy"}
+        j02 = "json.loads(j02s)"
+        with pytest.raises(RuntimeError, match=rf"Failure to provide dict/list"):  # .format()):
+            assert serialize_access.setValue(j02, keys, newValue)
+        # assert newValue == j02[keys[0]]
+
+    def testBadStructOneKey(self):
+        """
+        Test with simple string json and one key.
+        No clear what results should be.
+        :return:
+        """
+        keys = ["b"]
+        key = serialize_access.DELIMITER.join(keys)
+        newValue = {"zz": "yyy"}
+        j02 = "json.loads(j02s)"
+        serialize_access.setValue(j02, key, newValue)
+        # need to define what should result
+        # assert newValue == j02[keys[0]]
+
+    def testBadStructTuple(self):
+        """
+        Test with simple string json and one key.
+        No clear what results should be.
+        :return:
+        """
+        keys = ["b", "c"]
+        key = serialize_access.DELIMITER.join(keys)
+        newValue = {"zz": "yyy"}
+        j02 = ()
+        serialize_access.setValue(j02, key, newValue)
+        # need to define what should result
+        # assert newValue == j02[keys[0]]
